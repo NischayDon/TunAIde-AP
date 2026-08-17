@@ -22,6 +22,7 @@ from fastapi import (APIRouter, FastAPI, File, Form,
                      HTTPException, UploadFile, BackgroundTasks)
 from fastapi.concurrency import run_in_threadpool
 from motor.motor_asyncio import AsyncIOMotorClient
+from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
 ROOT_DIR = Path(__file__).parent
@@ -84,7 +85,24 @@ def put_object(path: str, data: bytes, content_type: str) -> dict:
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
+class PhaseOneIngestPayload(BaseModel):
+    source: str
+    source_upload_id: str
+    storage_provider: str
+    storage_key: str
+    filename: str
+    file_size: int
+    mime_type: Optional[str] = None
+    duration: Optional[int] = None
+    title: Optional[str] = None
+    artist: Optional[str] = None
+    note: Optional[str] = None
+
 async def publish_to_phase_one(upload_doc: dict):
+    if upload_doc.get("phase_one_queue_id") is not None:
+        logger.info(f"Upload {upload_doc['id']} already published to Phase One (queue ID: {upload_doc['phase_one_queue_id']}). Skipping.")
+        return
+
     await db.uploads.update_one({"id": upload_doc["id"]}, {"$set": {"queue_status": "PUBLISHING"}})
     url = os.environ.get("PHASE_ONE_API_URL", "").rstrip("/") + "/api/internal/ingest/audio"
     token = os.environ.get("PHASE_ONE_INGEST_TOKEN", "")
@@ -92,42 +110,80 @@ async def publish_to_phase_one(upload_doc: dict):
         logger.error("Phase One URL or token not configured.")
         await db.uploads.update_one({"id": upload_doc["id"]}, {"$set": {"queue_status": "PUBLISH_FAILED", "phase_one_error": "Not configured"}})
         return
-    payload = {
-        "source": "tunaide_ap",
-        "source_upload_id": upload_doc["id"],
-        "storage_provider": "emergent",
-        "storage_key": upload_doc["storage_path"],
-        "filename": upload_doc["file_name"],
-        "file_size": upload_doc["size"],
-        "mime_type": upload_doc["content_type"],
-        "duration": upload_doc["duration"],
-        "title": upload_doc["title"],
-        "artist": upload_doc["artist"],
-        "note": upload_doc["note"]
+
+    duration = upload_doc.get("duration")
+    normalized_duration = int(round(duration)) if duration is not None else None
+
+    try:
+        payload = PhaseOneIngestPayload(
+            source="tunaide_ap",
+            source_upload_id=upload_doc["id"],
+            storage_provider="emergent",
+            storage_key=upload_doc.get("storage_path", ""),
+            filename=upload_doc.get("file_name", ""),
+            file_size=upload_doc.get("size", 0),
+            mime_type=upload_doc.get("content_type"),
+            duration=normalized_duration,
+            title=upload_doc.get("title"),
+            artist=upload_doc.get("artist"),
+            note=upload_doc.get("note")
+        )
+    except Exception as e:
+        logger.error(f"Failed to construct Phase One payload for upload {upload_doc['id']}: {e}")
+        await db.uploads.update_one({"id": upload_doc["id"]}, {"$set": {"queue_status": "PUBLISH_FAILED", "phase_one_error": "Payload validation error"}})
+        return
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
     }
-    headers = {"Authorization": f"Bearer {token}"}
+
     max_retries = 3
     error_msg = ""
     for attempt in range(max_retries):
         try:
-            resp = await run_in_threadpool(requests.post, url, json=payload, headers=headers, timeout=30)
+            resp = await run_in_threadpool(
+                requests.post, 
+                url, 
+                json=payload.model_dump() if hasattr(payload, "model_dump") else payload.dict(), 
+                headers=headers, 
+                timeout=(5, 30)
+            )
+            
             if resp.status_code in (200, 201):
                 data = resp.json()
+                queue_id = data.get("queue_item_id") or data.get("id")
                 await db.uploads.update_one({"id": upload_doc["id"]}, {"$set": {
                     "queue_status": "PUBLISHED",
-                    "phase_one_queue_id": data.get("id"),
+                    "phase_one_queue_id": queue_id,
                     "phase_one_published_at": now_iso()
                 }})
-                logger.info(f"Published upload {upload_doc['id']} to Phase One")
+                logger.info(f"Successfully published upload {upload_doc['id']} to Phase One queue item {queue_id}")
                 return
-            else:
-                logger.warning(f"Failed to publish to Phase One (status {resp.status_code}): {resp.text}")
+            elif resp.status_code == 422:
+                logger.warning(f"Phase One rejected upload {upload_doc['id']} with HTTP 422: {resp.text}")
+                error_msg = f"HTTP 422: {resp.text}"
+                break
+            elif resp.status_code in (400, 401, 403, 404):
+                logger.warning(f"Phase One rejected upload {upload_doc['id']} with HTTP {resp.status_code}: {resp.text}")
                 error_msg = f"HTTP {resp.status_code}"
+                break
+            else:
+                logger.warning(f"Temporary Phase One failure for upload {upload_doc['id']} (status {resp.status_code}): {resp.text}; retrying")
+                error_msg = f"HTTP {resp.status_code}"
+        except requests.exceptions.Timeout:
+            logger.warning(f"Temporary Phase One failure for upload {upload_doc['id']}; retrying (Timeout)")
+            error_msg = "Timeout"
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"Temporary Phase One failure for upload {upload_doc['id']}; retrying (ConnectionError)")
+            error_msg = "ConnectionError"
         except Exception as e:
             logger.warning(f"Error publishing to Phase One: {e}")
             error_msg = str(e)
+            
         if attempt < max_retries - 1:
             await asyncio.sleep(2 ** attempt)
+
     await db.uploads.update_one({"id": upload_doc["id"]}, {"$set": {
         "queue_status": "PUBLISH_FAILED",
         "phase_one_error": error_msg
