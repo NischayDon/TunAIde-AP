@@ -1,0 +1,203 @@
+{
+  "app_name": "tunAide AP — Audio Pusher",
+  "personality": "7 Dark-First Utility structure with 6 Glass / Luxe surfaces",
+  "personality_one_liner": "An intelligent, dark-first premium utility that feels fast, deeply technical, and exceptionally organized.",
+  "color": {
+    "surface": "#0a0a0c",
+    "onSurface": "#F2F2F2",
+    "surfaceSecondary": "#161618",
+    "onSurfaceSecondary": "#A0A0A5",
+    "surfaceTertiary": "#222225",
+    "onSurfaceTertiary": "#D1D1D6",
+    "surfaceInverse": "#FFFFFF",
+    "onSurfaceInverse": "#000000",
+    "brand": "#9D4EDD",
+    "brandPrimary": "#9D4EDD",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#B273F0",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#321550",
+    "onBrandTertiary": "#E5D0FF",
+    "success": "#10B981",
+    "onSuccess": "#022C1E",
+    "warning": "#F59E0B",
+    "onWarning": "#452902",
+    "error": "#EF4444",
+    "onError": "#450A0A",
+    "border": "#2D2D30",
+    "borderStrong": "#4A4A52",
+    "divider": "#1C1C1E"
+  },
+  "typography": {
+    "displayFontFamily": "Geist",
+    "textFontFamily": "Geist",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous utility spacing. Use md/lg for internal card padding, xl for section breaks. Ensure bottom padding accounts for safe area and floating selection bars.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "0",
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": true,
+    "do's": [
+      "Use glass on the bottom tab bar, floating multi-select footer, and sticky headers.",
+      "Add a subtle glow effect behind hero cards or primary CTAs using a brandTertiary radial gradient underneath.",
+      "Use blur on bottom sheets (Filter sheet, Push Config)."
+    ],
+    "dont's": [
+      "Do not use glass on regular list items or standard category cards.",
+      "Do not blur dense data areas like the upload queue."
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-blur",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "Onboarding",
+      "purpose": "Introduce the Find, Organize, Select, Push philosophy with a cinematic, dark-luxe feel.",
+      "states": {
+        "loading": "Hidden",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Full-bleed background image with heavy vertical gradient scrim (transparent to #0a0a0c at 70%). Text and pagination dots in the bottom 30%. Primary CTA sticky at bottom."
+    },
+    {
+      "name": "Auth",
+      "purpose": "Secure JWT login and registration with a premium, focused form.",
+      "states": {
+        "loading": "Spinner on primary button",
+        "empty": "N/A",
+        "error": "Inline text below input"
+      },
+      "layout": "Minimalist single-column form. Logo at top, inputs using surfaceTertiary background. Primary purple CTA."
+    },
+    {
+      "name": "Permissions & ScanProgress",
+      "purpose": "Explain why storage access is needed, followed by a deeply technical, dark-first scanning indicator.",
+      "states": {
+        "loading": "Oversized numeric progress (e.g., 42%) with a scanning path pulsing below.",
+        "empty": "N/A",
+        "error": "Scan failed + Retry CTA"
+      },
+      "layout": "Centered layout for permissions with large Phosphor icon. On scan, transitions to a command-center style progress view with live file path text."
+    },
+    {
+      "name": "LibraryHome",
+      "purpose": "The main hub to browse audio categories and recently discovered files.",
+      "states": {
+        "loading": "Skeleton grids for categories and lists.",
+        "empty": "Illustration + 'No audio files found. Pull to rescan.'",
+        "error": "Error banner + Retry"
+      },
+      "layout": "Search bar at top (navigates to Search tab). 2-column grid for 'Smart Categories' (All, Voice Memos, Music, etc.) using surfaceSecondary cards. 'Recently Added' vertical list below. If multi-select is active, a floating glass selection bar appears above the tab bar."
+    },
+    {
+      "name": "Search",
+      "purpose": "Universal search with live results and quick-access filter chips.",
+      "states": {
+        "loading": "Spinner in center",
+        "empty": "Magnifying glass icon + 'No results found'",
+        "error": "N/A"
+      },
+      "layout": "Sticky header with search input. Horizontal scrollable filter chips below (Duration, Format). Live vertical list of audio files."
+    },
+    {
+      "name": "AudioDetail",
+      "purpose": "View extensive metadata for a single file and preview playback.",
+      "states": {
+        "loading": "Skeleton rows",
+        "empty": "N/A",
+        "error": "Player error toast"
+      },
+      "layout": "Large title, surfaceSecondary card for metadata rows (Size, Duration, Format, Path). Sticky preview player (Play/Pause/Seek) at the bottom. Push button secondary action."
+    },
+    {
+      "name": "PushConfig",
+      "purpose": "Configure upload settings (quality, note) before pushing to tunAide Transcribe.",
+      "states": {
+        "loading": "Spinner overlay on confirm",
+        "empty": "N/A",
+        "error": "Toast error"
+      },
+      "layout": "Presented as a full-screen sheet or modal. Summary of selected files at top. Options for Upload Quality (segmented control), Priority, Note (text input). 'Push Now' / 'Add to Queue' primary CTAs at bottom."
+    },
+    {
+      "name": "Activity",
+      "purpose": "Monitor live uploads and transcription statuses.",
+      "states": {
+        "loading": "Skeleton list",
+        "empty": "Checkmark icon + 'Queue is empty'",
+        "error": "Failed rows highlighted in error color"
+      },
+      "layout": "Sticky top tabs (Uploads | Transcriptions). Vertical list of files with live progress bars (using brandPrimary for active, success for complete). Retry/Cancel icons on trailing edge."
+    },
+    {
+      "name": "Profile & Settings",
+      "purpose": "Manage user account, app preferences, and storage management.",
+      "states": {
+        "loading": "Skeleton",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Standard grouped list layout (surfaceSecondary sections) with simple toggle switches and navigation chevrons."
+    }
+  ],
+  "images": {
+    "onboarding_hero": {
+      "url": "https://images.unsplash.com/photo-1648878136576-5ac4e7d11111?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwxfHxtaW5pbWFsJTIwZGFyayUyMHRlY2glMjBhYnN0cmFjdHxlbnwwfHx8cHVycGxlfDE3ODY4OTkyMTF8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Abstract purple wavy background"
+    },
+    "empty_library": {
+      "url": "https://images.unsplash.com/photo-1550574184-78854de30fe2?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDN8MHwxfHNlYXJjaHwyfHxtaW5pbWFsJTIwZGFyayUyMHRlY2glMjBhYnN0cmFjdHxlbnwwfHx8cHVycGxlfDE3ODY4OTkyMTF8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Minimal dark metallic abstract"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly follow the user's color override: Use '#0a0a0c' for background and '#9D4EDD' (purple) for primary CTAs, active states, and highlights.",
+    "Implement the 'Dark-First Utility' layout style: clean lists, clear hierarchy, high-contrast text, minimal borders.",
+    "Ensure the Multi-Select floating bar is implemented using a sticky bottom container with `expo-blur` (glass effect) hovering just above the tab bar, showing 'X files selected' and a primary 'Push' button.",
+    "On the Activity screen, use precise, tactical progress bars for the upload queue, ensuring technical clarity.",
+    "Avoid making the app look like a Spotify clone. Category cards should look like file folders or data metrics, not album art.",
+    "Implement the gradient scrim overlay exactly as detailed in the <Imagery_and_Texture> rules for any text positioned over the onboarding hero image.",
+    "Apply 'brandTertiary' subtle backgrounds to feature icons or category avatars to give that premium glowing effect without overusing gradients.",
+    "Do NOT use heavy shadows. Use spacing and surface colors (surfaceSecondary vs surface) to establish depth."
+  ],
+  "haptics": {
+    "primary_button_press": "impactLight",
+    "file_select": "selection",
+    "push_success": "notificationSuccess",
+    "tab_change": "selection"
+  }
+}
