@@ -7,10 +7,10 @@ Build "tunAide AP" (tunAide Audio Pusher) — a production-quality Expo/React Na
 - Auth: JWT email/password (FastAPI + MongoDB, bcrypt + PyJWT, 7-day tokens, secure token storage)
 - tunAide Transcribe API: our FastAPI backend acts as the tunAide API; transcription is **SIMULATED (MOCK)** — jobs flip processing→complete after 45s; swappable via env later
 - "View on Website": configurable `EXPO_PUBLIC_TRANSCRIBE_WEB_URL` (empty by default → informative toast, nothing invented)
-- Uploaded audio storage: Emergent Managed Object Storage
+- Uploaded audio storage: S3 Object Storage
 
 ## Architecture
-- **Backend** (`/app/backend/server.py`): FastAPI + Motor/MongoDB. Routes (all `/api`): auth/register, auth/login, auth/me, POST /uploads (multipart → Emergent Object Storage, duplicate-awareness by name+size), GET /uploads, GET /transcriptions (time-based simulated status). uuid string ids, `_id` excluded everywhere.
+- **Backend** (`/app/backend/server.py`): FastAPI + Motor/MongoDB. Routes (all `/api`): auth/register, auth/login, auth/me, POST /uploads (multipart → S3 Object Storage, duplicate-awareness by name+size), GET /uploads, GET /transcriptions (time-based simulated status). uuid string ids, `_id` excluded everywhere.
 - **Frontend** (Expo Router, SDK 54):
   - `src/theme.ts` design tokens (from design_guidelines.json), Geist fonts (local TTFs in assets/fonts)
   - `src/context/` — Auth, Library (scan/index/favorites/selection), Upload (queue engine: sequential, progress, retry×1 auto, cancel, wifi-only + offline checks), Toast

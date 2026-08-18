@@ -6,6 +6,14 @@ import os
 # Add backend to sys.path to import server
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+# Mock environment variables required by server.py at import time
+os.environ["MONGO_URL"] = "mongodb://localhost:27017"
+os.environ["DB_NAME"] = "test_db"
+os.environ["S3_ENDPOINT_URL"] = "http://localhost:9000"
+os.environ["S3_ACCESS_KEY_ID"] = "minioadmin"
+os.environ["S3_SECRET_ACCESS_KEY"] = "minioadmin"
+os.environ["S3_BUCKET_NAME"] = "test-bucket"
+
 from server import publish_to_phase_one, db
 import requests
 

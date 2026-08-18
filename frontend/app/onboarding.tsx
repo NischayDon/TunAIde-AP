@@ -67,7 +67,7 @@ export default function Onboarding() {
               <View style={styles.heroWrap}>
                 <Image source={{ uri: HERO }} style={StyleSheet.absoluteFillObject} contentFit="cover" />
                 <LinearGradient
-                  colors={['rgba(10,10,12,0.15)', 'rgba(10,10,12,0.75)', '#0a0a0c']}
+                  colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.75)', '#FFFFFF']}
                   locations={[0, 0.6, 1]}
                   style={StyleSheet.absoluteFillObject}
                 />

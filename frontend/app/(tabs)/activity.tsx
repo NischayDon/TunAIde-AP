@@ -105,7 +105,7 @@ export default function Activity() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand2} />}
           renderItem={({ item }) => (
             <View style={styles.row} testID={`upload-history-${item.id}`}>
-              <View style={[styles.rowIcon, { backgroundColor: item.queue_status === 'PUBLISH_FAILED' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)' }]}>
+              <View style={[styles.rowIcon, { backgroundColor: item.queue_status === 'PUBLISH_FAILED' ? 'rgba(220,20,60,0.12)' : 'rgba(16,185,129,0.12)' }]}>
                 <Ionicons name={item.queue_status === 'PUBLISH_FAILED' ? 'warning' : 'checkmark-done'} size={18} color={item.queue_status === 'PUBLISH_FAILED' ? colors.error : colors.success} />
               </View>
               <View style={{ flex: 1 }}>

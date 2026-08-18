@@ -54,7 +54,7 @@ export default function RootLayout() {
           <ToastProvider>
             <LibraryProvider>
               <UploadProvider>
-                <StatusBar style="light" />
+                <StatusBar style="dark" />
                 <Stack
                   screenOptions={{
                     headerShown: false,

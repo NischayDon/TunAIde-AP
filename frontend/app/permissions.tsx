@@ -104,7 +104,7 @@ export default function Permissions() {
       {(stage === 'denied' || stage === 'blocked') && (
         <View style={styles.center} testID="permission-denied-view">
           <View style={styles.iconGlowWrap}>
-            <View style={[styles.glow, { backgroundColor: 'rgba(239,68,68,0.12)' }]} />
+            <View style={[styles.glow, { backgroundColor: 'rgba(220,20,60,0.12)' }]} />
             <View style={[styles.iconTile, { borderColor: colors.error }]}>
               <Ionicons name="lock-closed" size={36} color={colors.error} />
             </View>

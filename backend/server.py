@@ -2,7 +2,7 @@
 
 FastAPI backend acting as the tunAide API layer:
 - JWT email/password authentication
-- Audio upload endpoint (multipart) -> Emergent Object Storage
+- Audio upload endpoint (multipart) -> S3 Object Storage
 - Upload records + transcription jobs
 NOTE: Transcription processing is SIMULATED (mock) — jobs move from
 "processing" to "complete" after TRANSCRIBE_SIM_SECONDS. Swap the
@@ -37,48 +37,44 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# ------------------------------------------------- Emergent Object Storage
-STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or \
-    "https://integrations.emergentagent.com"
-STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
+# ------------------------------------------------- Railway S3 Object Storage
+import boto3
+from botocore.exceptions import ClientError
+
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL")
+S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID")
+S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY")
+S3_BUCKET_NAME = os.environ.get("S3_BUCKET_NAME")
+S3_REGION_NAME = os.environ.get("S3_REGION_NAME", "us-east-1")
 APP_NAME = "tunaide-ap"
-_storage_key: Optional[str] = None
 
 MAX_UPLOAD_BYTES = 300 * 1024 * 1024  # 300 MB per file
 
+def get_s3_client():
+    if not all([S3_ENDPOINT_URL, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET_NAME]):
+        raise RuntimeError("S3 configuration is missing. Ensure S3_ENDPOINT_URL, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, and S3_BUCKET_NAME are set.")
+    return boto3.client(
+        's3',
+        endpoint_url=S3_ENDPOINT_URL,
+        aws_access_key_id=S3_ACCESS_KEY_ID,
+        aws_secret_access_key=S3_SECRET_ACCESS_KEY,
+        region_name=S3_REGION_NAME
+    )
 
-def init_storage() -> str:
-    """Idempotent storage init; returns reusable storage_key."""
-    global _storage_key
-    if _storage_key:
-        return _storage_key
-    resp = requests.post(f"{STORAGE_URL}/init",
-                         json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
-
-
-def put_object(path: str, data: bytes, content_type: str) -> dict:
-    """Upload bytes to object storage. Retries once on stale key (503)."""
-    global _storage_key
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120)
-    if resp.status_code == 503:
-        _storage_key = None
-        key = init_storage()
-        resp = requests.put(
-            f"{STORAGE_URL}/objects/{path}",
-            headers={"X-Storage-Key": key, "Content-Type": content_type},
-            data=data, timeout=120)
-    if resp.status_code == 402:
-        raise HTTPException(402, "Upload storage quota reached. Please try again later.")
-    resp.raise_for_status()
-    return resp.json()
+def put_object(path: str, file_obj, content_type: str) -> dict:
+    """Upload file-like object to Railway S3 object storage safely without loading entire file into RAM."""
+    s3 = get_s3_client()
+    try:
+        s3.upload_fileobj(
+            file_obj,
+            S3_BUCKET_NAME,
+            path,
+            ExtraArgs={'ContentType': content_type}
+        )
+        return {"path": path}
+    except ClientError as e:
+        logger.error(f"S3 upload failed: {e}")
+        raise HTTPException(502, "Upload storage is unavailable right now. Please retry.")
 
 
 # ----------------------------------------------------------------- helpers
@@ -88,7 +84,6 @@ def now_iso() -> str:
 class PhaseOneIngestPayload(BaseModel):
     source: str
     source_upload_id: str
-    storage_provider: str
     storage_key: str
     filename: str
     file_size: int
@@ -118,7 +113,6 @@ async def publish_to_phase_one(upload_doc: dict):
         payload = PhaseOneIngestPayload(
             source="tunaide_ap",
             source_upload_id=upload_doc["id"],
-            storage_provider="emergent",
             storage_key=upload_doc.get("storage_path", ""),
             filename=upload_doc.get("file_name", ""),
             file_size=upload_doc.get("size", 0),
@@ -219,10 +213,9 @@ async def create_upload(
     priority: str = Form("normal"),
     duration: str = Form("0"),
 ):
-    data = await file.read()
-    if not data:
+    if not getattr(file, "size", 1): # FastAPI UploadFile has size attribute
         raise HTTPException(400, "Uploaded file is empty")
-    if len(data) > MAX_UPLOAD_BYTES:
+    if getattr(file, "size", 0) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "File exceeds the 300 MB upload limit")
 
     try:
@@ -235,16 +228,17 @@ async def create_upload(
     storage_path = f"{APP_NAME}/uploads/{uuid.uuid4().hex}.{ext}"
 
     try:
-        stored = await run_in_threadpool(put_object, storage_path, data, content_type)
+        file.file.seek(0)
+        stored = await run_in_threadpool(put_object, storage_path, file.file, content_type)
     except HTTPException:
         raise
     except Exception as exc:  # noqa: BLE001
         logger.error("Object storage upload failed: %s", exc)
         raise HTTPException(502, "Upload storage is unavailable right now. Please retry.")
 
-    # Duplicate awareness: same name + byte size (files stay separate)
+    # Duplicate awareness: same name + size (files stay separate)
     dup = await db.uploads.find_one(
-        {"file_name": file_name, "size": len(data)},
+        {"file_name": file_name, "size": getattr(file, "size", 0)},
         {"_id": 0, "id": 1})
 
     upload_doc = {
@@ -256,7 +250,7 @@ async def create_upload(
         "quality": quality,
         "priority": priority,
         "duration": duration_sec,
-        "size": len(data),
+        "size": getattr(file, "size", 0),
         "content_type": content_type,
         "storage_path": stored.get("path", storage_path),
         "status": "complete",
@@ -311,11 +305,7 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def startup():
-    try:
-        await run_in_threadpool(init_storage)
-        logger.info("Object storage initialised")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Object storage init failed (will retry on upload): %s", exc)
+    pass
 
 
 @app.on_event("shutdown")
