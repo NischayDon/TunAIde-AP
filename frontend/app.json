@@ -23,7 +23,6 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tunaide.audio",
-      "versionCode": 1,
       "permissions": [
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",

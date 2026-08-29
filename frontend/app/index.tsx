@@ -12,7 +12,7 @@ export default function Index() {
   const [onboarded, setOnboarded] = useState<boolean | null>(null);
 
   useEffect(() => {
-    storage.getItem('tunaide.onboarded', false).then((v) => setOnboarded(v === true));
+    storage.getItem('tunaide.onboarded', false as boolean).then((v) => setOnboarded(v === true));
   }, []);
 
   if (onboarded === null || !libLoaded) {
