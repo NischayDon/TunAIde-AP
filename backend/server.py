@@ -312,23 +312,85 @@ async def startup():
 async def shutdown_db_client():
     client.close()
 
-# -------------------------------------------------------------- PDF Extraction
+# -------------------------------------------------------------- Text Extraction (PDF + Image OCR)
 import io
 import PyPDF2
 
+IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tiff", ".tif", ".webp")
+
 @api.post("/extract-pdf")
-async def extract_pdf(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "File must be a PDF")
+async def extract_text(file: UploadFile = File(...)):
+    """Extract text from PDF (digital text) or images (via Emergent LLM OCR)."""
+    fname = (file.filename or "").lower()
+    is_pdf = fname.endswith(".pdf")
+    is_image = any(fname.endswith(ext) for ext in IMAGE_EXTS)
+
+    if not is_pdf and not is_image:
+        raise HTTPException(400, "File must be a PDF or an image (JPG, PNG, etc.)")
+
     try:
         content = await file.read()
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
-        text = ""
-        for page in pdf_reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-        return {"text": text}
+
+        if is_pdf:
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+            text = ""
+            for page in pdf_reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            return {"text": text}
+
+        # Image OCR via Emergent LLM (vision model)
+        import base64
+        emergent_key = os.environ.get("EMERGENT_LLM_KEY", "")
+        if not emergent_key:
+            raise HTTPException(500, "OCR service not configured")
+
+        img_b64 = base64.b64encode(content).decode("utf-8")
+        mime = file.content_type or "image/jpeg"
+
+        ocr_payload = {
+            "model": "gemini-2.0-flash",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:{mime};base64,{img_b64}"}
+                        },
+                        {
+                            "type": "text",
+                            "text": "Extract ALL text from this image exactly as written. Return ONLY the extracted text, nothing else. Preserve paragraphs and line breaks."
+                        }
+                    ]
+                }
+            ],
+            "max_tokens": 4096
+        }
+        headers = {
+            "Authorization": f"Bearer {emergent_key}",
+            "Content-Type": "application/json"
+        }
+
+        resp = await run_in_threadpool(
+            requests.post,
+            "https://api.emergentmind.com/v1/chat/completions",
+            json=ocr_payload,
+            headers=headers,
+            timeout=(10, 60)
+        )
+
+        if resp.status_code != 200:
+            logger.error(f"Emergent LLM OCR failed: {resp.status_code} {resp.text}")
+            raise HTTPException(502, "OCR service returned an error")
+
+        data = resp.json()
+        extracted = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+        return {"text": extracted}
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error extracting PDF: {e}")
-        raise HTTPException(500, "Failed to extract text from PDF")
+        logger.error(f"Error extracting text: {e}")
+        raise HTTPException(500, "Failed to extract text from file")

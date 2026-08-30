@@ -6,6 +6,7 @@ import { API_URL } from '@/src/api/client';
 import { colors, spacing, font, type, radius } from '@/src/theme';
 import { getDocument, createDocument, updateDocumentText } from '@/src/services/readAloud/readAloudStorage';
 import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 
 export default function ReadAloudEditor() {
@@ -43,10 +44,10 @@ export default function ReadAloudEditor() {
     }
   };
 
-  const handleImport = async () => {
+  const handleImportText = async () => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/plain', 'application/pdf'],
+        type: 'text/plain',
         copyToCacheDirectory: true,
       });
 
@@ -54,43 +55,95 @@ export default function ReadAloudEditor() {
         return;
       }
 
-      const asset = result.assets[0];
-      const isPdf = asset.mimeType === 'application/pdf' || asset.name.endsWith('.pdf');
-      
       setLoading(true);
-      
-      if (!isPdf) {
-        // Simple text file
-        const fileContent = await FileSystem.readAsStringAsync(asset.uri);
-        setText(fileContent);
-        if (!name) setName(asset.name.replace('.txt', ''));
-      } else {
-        const formData = new FormData();
-        formData.append('file', {
-          uri: asset.uri,
-          name: asset.name,
-          type: asset.mimeType || 'application/pdf',
-        } as any);
-
-        const res = await fetch(`${API_URL}/extract-pdf`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!res.ok) {
-          throw new Error('Failed to extract text from PDF');
-        }
-
-        const data = await res.json();
-        setText(data.text);
-        if (!name) setName(asset.name.replace('.pdf', ''));
-      }
+      const asset = result.assets[0];
+      const fileContent = await FileSystem.readAsStringAsync(asset.uri);
+      setText(fileContent);
+      if (!name) setName(asset.name.replace('.txt', ''));
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to import file.');
+      Alert.alert('Error', 'Failed to import text file.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImportImage = async (useCamera: boolean) => {
+    try {
+      let result;
+      if (useCamera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission needed', 'Camera permission is required to scan documents.');
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ['images'],
+          quality: 1,
+        });
+      } else {
+        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Permission needed', 'Photo library permission is required to select images.');
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ['images'],
+          quality: 1,
+        });
+      }
+
+      if (result.canceled || !result.assets || result.assets.length === 0) {
+        return;
+      }
+
+      setLoading(true);
+      const asset = result.assets[0];
+      const fileName = asset.fileName || 'scan.jpg';
+
+      // Upload the image to backend for OCR extraction
+      const uploadResult = await FileSystem.uploadAsync(
+        `${API_URL}/extract-pdf`,
+        asset.uri,
+        {
+          httpMethod: 'POST',
+          uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+          fieldName: 'file',
+          mimeType: asset.mimeType || 'image/jpeg',
+          parameters: { file_name: fileName },
+        }
+      );
+
+      if (uploadResult.status >= 200 && uploadResult.status < 300) {
+        const data = JSON.parse(uploadResult.body);
+        if (data.text && data.text.trim().length > 0) {
+          setText(data.text);
+          if (!name) setName('Scanned Document');
+        } else {
+          Alert.alert('No Text Found', 'Could not extract any text from this image.');
+        }
+      } else {
+        throw new Error('Server returned an error');
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert('OCR Error', 'Failed to extract text from the image. Make sure you have an internet connection.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showImportOptions = () => {
+    Alert.alert(
+      'Import Document',
+      'Choose a source',
+      [
+        { text: 'Take Photo (OCR)', onPress: () => handleImportImage(true) },
+        { text: 'Choose Image (OCR)', onPress: () => handleImportImage(false) },
+        { text: 'Import TXT File', onPress: handleImportText },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
   };
 
   return (
@@ -118,13 +171,13 @@ export default function ReadAloudEditor() {
             onChangeText={setName}
           />
           
-          <TouchableOpacity style={styles.importButton} onPress={handleImport} disabled={loading}>
+          <TouchableOpacity style={styles.importButton} onPress={showImportOptions} disabled={loading}>
             {loading ? (
               <ActivityIndicator color={colors.brand} />
             ) : (
               <>
-                <Ionicons name="document-attach" size={20} color={colors.brand} />
-                <Text style={styles.importText}>Import TXT or PDF</Text>
+                <Ionicons name="document-text" size={20} color={colors.brand} />
+                <Text style={styles.importText}>Import & Scan (OCR)</Text>
               </>
             )}
           </TouchableOpacity>
