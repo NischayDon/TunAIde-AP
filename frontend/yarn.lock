@@ -3459,18 +3459,6 @@ expo-haptics@15.0.8:
   resolved "https://registry.npmjs.org/expo-haptics/-/expo-haptics-15.0.8.tgz"
   integrity sha512-lftutojy8Qs8zaDzzjwM3gKHFZ8bOOEZDCkmh2Ddpe95Ra6kt2izeOfOfKuP/QEh0MZ1j9TfqippyHdRd1ZM9g==
 
-expo-image-loader@~57.0.1:
-  version "57.0.1"
-  resolved "https://registry.npmjs.org/expo-image-loader/-/expo-image-loader-57.0.1.tgz"
-  integrity sha512-uhrZKLT/cTl2mXyR28kPpVkS5O+PK9N1QA/07IFM4f5T4g0lTW1JHT3NEWwEEsGFldPmVX4j7LwUVVZxE+woug==
-
-expo-image-picker@57.0.14:
-  version "57.0.14"
-  resolved "https://registry.npmjs.org/expo-image-picker/-/expo-image-picker-57.0.14.tgz"
-  integrity sha512-NK9XBQqOtscbB/uRts1Gm7Oki6odMN3FQPWD6fSKmNUfKM69O6kcgU25lEXFTSLZ7sLl+AopHa2X0uILd8rjaQ==
-  dependencies:
-    expo-image-loader "~57.0.1"
-
 expo-image@3.0.11:
   version "3.0.11"
   resolved "https://registry.npmjs.org/expo-image/-/expo-image-3.0.11.tgz"
