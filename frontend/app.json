@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "tunAide AP",
-    "slug": "azrael",
+    "slug": "tunaide",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -23,13 +23,14 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.tunaide.audio",
+      "versionCode": 1,
       "permissions": [
         "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
         "android.permission.RECORD_AUDIO",
         "android.permission.MODIFY_AUDIO_SETTINGS",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED"
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -66,7 +67,7 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "3920d62b-8866-4dce-92c1-5347c177571b"
+        "projectId": "0234d9da-fab1-43c6-a924-c47f3f644d28"
       }
     },
     "owner": "nischaydons-team"

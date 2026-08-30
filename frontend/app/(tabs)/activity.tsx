@@ -10,7 +10,7 @@ import { EmptyState, ProgressBar } from '@/src/components/common';
 import { activityApi, ServerUpload } from '@/src/api/client';
 import { useUploads } from '@/src/context/UploadContext';
 import { colors, font, radius, spacing, type } from '@/src/theme';
-import { formatBytes, timeAgo } from '@/src/utils/format';
+import { formatBytes, formatDuration, timeAgo } from '@/src/utils/format';
 
 export default function Activity() {
   const router = useRouter();
@@ -46,7 +46,7 @@ export default function Activity() {
     try {
       await activityApi.retryPublish(id);
       load();
-    } catch {
+    } catch (e) {
       // ignore
     }
   };

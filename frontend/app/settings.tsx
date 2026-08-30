@@ -19,8 +19,8 @@ export default function Settings() {
   const [autoRetry, setAutoRetry] = useState(true);
 
   useEffect(() => {
-    storage.getItem('tunaide.settings.wifiOnly', false as boolean).then((v) => setWifiOnly(v === true));
-    storage.getItem('tunaide.settings.autoRetry', true as boolean).then((v) => setAutoRetry(v !== false));
+    storage.getItem<boolean>('tunaide.settings.wifiOnly', false).then((v) => setWifiOnly(v === true));
+    storage.getItem<boolean>('tunaide.settings.autoRetry', true).then((v) => setAutoRetry(v !== false));
   }, []);
 
   const toggleWifi = (v: boolean) => {

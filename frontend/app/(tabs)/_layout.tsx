@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { useLibrary } from '@/src/context/LibraryContext';
 import { useUploads } from '@/src/context/UploadContext';
 import { colors, font } from '@/src/theme';
@@ -56,6 +55,15 @@ export default function TabsLayout() {
           tabBarBadge: selection.size > 0 ? selection.size : undefined,
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? 'cloud-upload' : 'cloud-upload-outline'} size={22} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="read-aloud"
+        options={{
+          title: 'Read',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={focused ? 'book' : 'book-outline'} size={22} color={color} />
           ),
         }}
       />

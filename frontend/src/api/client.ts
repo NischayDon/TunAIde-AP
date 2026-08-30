@@ -1,8 +1,8 @@
 // tunAide API service layer.
 // Base URL comes from env — swap EXPO_PUBLIC_API_URL to point at the real
 // tunAide Transcribe backend when it becomes available.
-const BACKEND = process.env.EXPO_PUBLIC_API_URL;
-export const API_URL = `${BACKEND}/api`;
+const BACKEND = process.env.EXPO_PUBLIC_API_URL || '';
+export const API_URL = BACKEND ? `${BACKEND}/api` : '/api';
 export const TRANSCRIBE_WEB_URL = (process.env.EXPO_PUBLIC_TRANSCRIBE_WEB_URL || '').trim();
 
 async function apiFetch(path: string, options: RequestInit = {}) {

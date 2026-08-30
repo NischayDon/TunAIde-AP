@@ -86,7 +86,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     try {
       const state = await Network.getNetworkStateAsync();
       if (state.isConnected === false || state.isInternetReachable === false) return 'offline';
-      const wifiOnly = await storage.getItem('tunaide.settings.wifiOnly', false as boolean);
+      const wifiOnly = await storage.getItem<boolean>('tunaide.settings.wifiOnly', false);
       if (wifiOnly === true && Platform.OS !== 'web' && state.type !== Network.NetworkStateType.WIFI) {
         return 'wifi-required';
       }
@@ -187,7 +187,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         update(job.id, { status: 'cancelled', error: 'Upload cancelled' });
         return false;
       }
-      const autoRetry = await storage.getItem('tunaide.settings.autoRetry', true as boolean);
+      const autoRetry = await storage.getItem<boolean>('tunaide.settings.autoRetry', true);
       if (autoRetry === true && job.retryCount < 1) {
         update(job.id, { status: 'queued', retryCount: job.retryCount + 1, progress: 0, uploadedBytes: 0 });
         return true; // stays queued, will be picked up again

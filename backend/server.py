@@ -26,7 +26,7 @@ from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR.parent / '.env')
 
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -311,3 +311,24 @@ async def startup():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+# -------------------------------------------------------------- PDF Extraction
+import io
+import PyPDF2
+
+@api.post("/extract-pdf")
+async def extract_pdf(file: UploadFile = File(...)):
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(400, "File must be a PDF")
+    try:
+        content = await file.read()
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(content))
+        text = ""
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n"
+        return {"text": text}
+    except Exception as e:
+        logger.error(f"Error extracting PDF: {e}")
+        raise HTTPException(500, "Failed to extract text from PDF")

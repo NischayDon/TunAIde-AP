@@ -101,7 +101,7 @@ export function LibraryProvider({ children }: { children: React.ReactNode }) {
           const parsed = JSON.parse(raw) as AudioFile[];
           if (Array.isArray(parsed)) setFiles(parsed);
         }
-        const scanned = await storage.getItem(SCANNED_KEY, false as boolean);
+        const scanned = await storage.getItem<boolean>(SCANNED_KEY, false);
         setHasScanned(scanned === true);
         const favRaw = await storage.getItem(FAV_KEY, '');
         if (favRaw && typeof favRaw === 'string') {

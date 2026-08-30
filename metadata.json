@@ -1,0 +1,8 @@
+{
+  "name": "TunAIde AP",
+  "description": "Audio Pusher companion app for tunAide. Discover, organize, preview, and push audio files for transcription.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
