@@ -8,7 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, font, type, radius } from '@/src/theme';
 import { getDocument, createDocument, updateDocumentText } from '@/src/services/readAloud/readAloudStorage';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { WebView } from 'react-native-webview';
 import JSZip from 'jszip';
 
